@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Windows 12</title>
+
+<style>
+*{box-sizing:border-box;font-family:Segoe UI,Arial}
+body{
+    margin:0;height:100vh;overflow:hidden;
+    background:url("https://picsum.photos/1920/1080") center/cover;
+}
+
+/* LOGIN */
+#login{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.6);
+    display:flex;align-items:center;justify-content:center;
+    color:white;z-index:999;
+}
+#loginBox{
+    background:#1e1e1e;padding:30px;
+    border-radius:14px;width:300px;text-align:center;
+}
+#loginBox input,button{
+    width:100%;padding:10px;margin-top:10px;
+    border:none;border-radius:6px;
+}
+button{background:#0078d7;color:white;cursor:pointer}
+
+/* DESKTOP */
+#desktop{
+    display:none;
+    padding:15px;
+    height:100%;
+    color:white;
+}
+.icon{
+    width:80px;text-align:center;
+    margin-bottom:20px;
+    cursor:pointer;
+}
+.icon span{font-size:12px}
+
+/* TASKBAR */
+#taskbar{
+    position:fixed;bottom:0;width:100%;height:48px;
+    background:rgba(30,30,30,.9);
+    display:none;align-items:center;padding:0 10px;
+}
+#startBtn{padding:8px 14px;border-radius:6px;border:none}
+#clock{margin-left:auto;color:white}
+
+/* START */
+#startMenu{
+    position:fixed;bottom:48px;left:10px;
+    width:260px;height:320px;
+    background:#2b2b2b;
+    display:none;color:white;padding:10px;border-radius:12px;
+}
+.startItem{cursor:pointer;margin:6px 0}
+
+/* WINDOW */
+.window{
+    position:absolute;width:520px;
+    background:#1e1e1e;color:white;
+    border-radius:10px;box-shadow:0 0 15px black;
+}
+.titlebar{
+    background:#333;padding:8px;
+    display:flex;justify-content:space-between;
+    cursor:move;
+}
+.content{padding:10px}
+
+/* FILES */
+.file{padding:6px;cursor:grab}
+.file:hover{background:#333}
+.folder{font-weight:bold}
+.dropzone{
+    border:1px dashed #555;
+    padding:10px;
+    min-height:100px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+    <div id="loginBox">
+        <h2>User</h2>
+        <input id="pass" type="password" placeholder="Hasło">
+        <button onclick="login()">Zaloguj</button>
+        <small>hasło: 1234</small>
+    </div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop" ondrop="drop(event,'desktop')" ondragover="event.preventDefault()"></div>
+
+<!-- START -->
+<div id="startMenu">
+    <b>Windows 12</b><hr>
+    <div class="startItem" onclick="openExplorer()">📁 Explorer</div>
+    <div class="startItem" onclick="addFile()">➕ Dodaj plik</div>
+</div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+    <button id="startBtn" onclick="toggleStart()">Start</button>
+    <div id="clock"></div>
+</div>
+
+<input type="file" id="fileInput" multiple hidden onchange="loadFiles(this.files)">
+
+<script>
+/* ELEMENTY */
+const desktopEl = document.getElementById("desktop");
+const taskbarEl = document.getElementById("taskbar");
+const startMenu = document.getElementById("startMenu");
+const clockEl = document.getElementById("clock");
+const fileInput = document.getElementById("fileInput");
+
+/* LOGIN */
+function login(){
+    const password = document.getElementById("pass").value;
+    const loginScreen = document.getElementById("login");
+
+    if(password === "1234"){
+        loginScreen.style.display = "none";
+        desktopEl.style.display = "block";
+        taskbarEl.style.display = "flex";
+    } else {
+        alert("Złe hasło!");
+    }
+}
+
+/* CLOCK */
+setInterval(()=>{
+    clockEl.innerText = new Date().toLocaleTimeString([], {
+        hour:'2-digit', minute:'2-digit'
+    });
+},1000);
+
+/* START */
+function toggleStart(){
+    startMenu.style.display =
+        startMenu.style.display === "block" ? "none" : "block";
+}
+
+/* DATA */
+let system = {
+    desktop: [],
+    folders: {
+        "Dokumenty": []
+    }
+};
+
+/* ADD FILE */
+function addFile(){
+    fileInput.click();
+}
+function loadFiles(files){
+    for(let f of files){
+        system.desktop.push(f.name);
+    }
+    renderDesktop();
+}
+
+/* DESKTOP */
+function renderDesktop(){
+    desktopEl.innerHTML = "";
+    system.desktop.forEach(f=>{
+        desktopEl.innerHTML += `
+        <div class="icon file" draggable="true"
+        ondragstart="drag(event,'${f}')">📄 ${f}</div>`;
+    });
+}
+
+/* DRAG */
+let dragged = null;
+function drag(e,name){ dragged = name; }
+function drop(e,target){
+    e.preventDefault();
+    if(target==="desktop" && dragged){
+        system.desktop.push(dragged);
+        dragged = null;
+        renderDesktop();
+    }
+}
+
+/* EXPLORER */
+function openExplorer(){
+    if(document.getElementById("explorer")) return;
+
+    let w = document.createElement("div");
+    w.className = "window";
+    w.id = "explorer";
+    w.style.top = "100px";
+    w.style.left = "100px";
+
+    w.innerHTML = `
+    <div class="titlebar">
+        <span>Eksplorator</span>
+        <button onclick="this.closest('.window').remove()">✖</button>
+    </div>
+    <div class="content">
+        <button onclick="newFolder()">📁 Nowy folder</button>
+        <div id="explorerFiles" class="dropzone"></div>
+    </div>`;
+    document.body.appendChild(w);
+    renderExplorer();
+}
+
+function newFolder(){
+    let name = prompt("Nazwa folderu:");
+    if(name) system.folders[name] = [];
+    renderExplorer();
+}
+function renderExplorer(){
+    let box = document.getElementById("explorerFiles");
+    if(!box) return;
+    box.innerHTML = "";
+    for(let f in system.folders){
+        box.innerHTML += `<div class="folder">📁 ${f}</div>`;
+    }
+}
+</script>
+
+</body>
+</html>
+
